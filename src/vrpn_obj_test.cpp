@@ -13,14 +13,15 @@ int main (int argc, char** argv)
   while(true)
   {
     sleep(1);
-    printf("x=%f y=%f z=%f qw=%f qx=%f qy=%f qz=%f \n", \
+    printf("x=%f y=%f z=%f qw=%f qx=%f qy=%f qz=%f Freq = %f \n", \
            obj_tracker.x, \
            obj_tracker.y, \
            obj_tracker.z, \
            obj_tracker.qw, \
            obj_tracker.qx, \
            obj_tracker.qy, \
-           obj_tracker.qz
+           obj_tracker.qz,
+           obj_tracker.getFreq() \
            );
 //        if ( 'x' == getchar() )
 //        {

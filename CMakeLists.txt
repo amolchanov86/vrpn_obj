@@ -44,6 +44,7 @@ add_library(${PROJECT_NAME}_lib
   src/${PROJECT_NAME}.cpp
   ${ARTLIB_ROOT}/art_timer.cpp
   ${ARTLIB_ROOT}/art_signals.cpp
+  ${ARTLIB_ROOT}/art_time.cpp
   ${VRPN_ROOT}/vrpn_Connection.C
   ${VRPN_ROOT}/vrpn_Tracker.C
   ${VRPN_ROOT}/vrpn_Shared.C

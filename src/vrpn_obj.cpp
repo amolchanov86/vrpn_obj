@@ -40,18 +40,54 @@
 
 #include <vrpn_obj.h>
 
+#include <art_time.h>
+
+ViconFreqEstimator::ViconFreqEstimator():
+  freq(0),
+  last_tick(0),
+  pack_counter(0)
+{
+
+}
+
+double ViconFreqEstimator::getFreq() const
+{
+  return freq;
+}
+
+double ViconFreqEstimator::tick(bool main_loop)
+{
+  double new_tick = Art::ArtClock();
+  double tick_interval = new_tick - last_tick;
+//  printf("tick_interval = %f \n", tick_interval);
+
+  if(main_loop)
+  {
+    if(pack_counter)
+    {
+      freq = (double) pack_counter  / tick_interval;
+      pack_counter = 0;
+      last_tick = new_tick;
+    }
+    else
+    {
+      freq = std::min( (double) 1.0  / tick_interval, freq);
+    }
+  }
+  else
+  {
+    pack_counter++;
+  }
+
+  return tick_interval;
+}
+
 
 void VRPN_CALLBACK vicon_track_obj(void* userData, const vrpn_TRACKERCB t)
 {
   viconObjTracker* tracker = static_cast<viconObjTracker*>(userData);
   tracker->procData(t);
 }
-
-//double sign(double value)
-//{
-//    return value >= 0 ? 1.0 : -1.0;
-//}
-
 
 viconObjTracker::viconObjTracker(const std::string host_name, const std::string obj_name, double self_loop_freq):
   ArtTimer(self_loop_freq),
@@ -84,11 +120,17 @@ viconObjTracker::viconObjTracker(const std::string host_name, const std::string 
 
 }
 
+double viconObjTracker::getFreq() const
+{
+  return freq_estim.getFreq();
+}
+
 void viconObjTracker::run()
 {
 //  printf("mainLoop() \n");
   obj_tracker->mainloop();
   vicon_connection->mainloop();
+  freq_estim.tick(); //< the main loop tick.
 }
 
 void viconObjTracker::procData(const vrpn_TRACKERCB t)
@@ -101,125 +143,6 @@ void viconObjTracker::procData(const vrpn_TRACKERCB t)
   qx = t.quat[0];
   qy = t.quat[1];
   qz = t.quat[2];
+
+  freq_estim.tick(false);//< designates that the package received, but it is not the main loop tick
 }
-
-
-
-//class RigidBody {
-//    public:
-//        RigidBody(
-//            ros::NodeHandle& nh,
-//            const std::string& ip,
-//            int port,
-//            const std::string& frame_id,
-//            const std::string& child_frame_id,
-//            const tf::Transform& transform,
-//            const tf::Vector3& scaling)
-//            : m_br()
-//            , m_connection()
-//            , m_tracker()
-//            , m_target()
-//            , m_transform(transform)
-//            , m_scaling(scaling)
-//        {
-//            std::string connec_nm = ip + ":" + boost::lexical_cast<std::string>(port);
-//            m_connection = vrpn_get_connection_by_name(connec_nm.c_str());
-
-//            // child_frame_id is the same as remote object name
-//            m_tracker = new vrpn_Tracker_Remote(child_frame_id.c_str(), m_connection);
-//            m_tracker->register_change_handler(this, track_target);
-
-//            m_target.header.frame_id = frame_id;
-//            m_target.child_frame_id = child_frame_id;
-//        }
-
-//        ~RigidBody()
-//        {
-//            // There is no way to close the connection in VRPN.
-//            // Leak both m_tracker and m_connection to avoid crashes on shutdown.
-//        }
-
-//        void step_vrpn()
-//        {
-//            m_tracker->mainloop();
-//            m_connection->mainloop();
-//        }
-
-//    private:
-//        friend void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB);
-
-//        void on_change(const vrpn_TRACKERCB t)
-//        {
-//            tf::Vector3 pos(t.pos[0], t.pos[1], t.pos[2]);
-//            pos = m_transform(pos);
-//            m_target.transform.translation.x = pos.x() * m_scaling.x();
-//            m_target.transform.translation.y = pos.y() * m_scaling.y();
-//            m_target.transform.translation.z = pos.z() * m_scaling.z();
-
-//            tf::Quaternion quat(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
-//            quat = m_transform * quat;
-//            m_target.transform.rotation.x = quat.x() * sign(m_scaling.x());
-//            m_target.transform.rotation.y = quat.y() * sign(m_scaling.y());
-//            m_target.transform.rotation.z = quat.z() * sign(m_scaling.z());
-//            m_target.transform.rotation.w = quat.w();
-
-//            m_target.header.stamp = ros::Time::now();
-
-//            m_br.sendTransform(m_target);
-//        }
-
-//    private:
-//        tf::TransformBroadcaster m_br;
-//        vrpn_Connection* m_connection;
-//        vrpn_Tracker_Remote* m_tracker;
-//        geometry_msgs::TransformStamped m_target;
-//        tf::Transform m_transform;
-//        tf::Vector3 m_scaling;
-//};
-
-//void VRPN_CALLBACK track_target(void* userData, const vrpn_TRACKERCB t)
-//{
-//    RigidBody* r = static_cast<RigidBody*>(userData);
-//    r->on_change(t);
-//}
-
-//int main(int argc, char* argv[])
-//{
-//    ros::init(argc, argv, "ros_vrpn_client");
-//    ros::NodeHandle nh("~");
-
-//    std::string ip;
-//    int port;
-//    std::string frame_id;
-//    std::string child_frame_id;
-//    double x, y, z, yaw, pitch, roll;
-//    double sx, sy, sz;
-
-//    nh.param<std::string>("ip", ip, "localhost");
-//    nh.param<int>("port", port, 3883);
-//    nh.param<std::string>("frame_id", frame_id, "world");
-//    nh.param<std::string>("child_frame_id", child_frame_id, "Tracker0");
-//    nh.param<double>("x", x, 0);
-//    nh.param<double>("y", y, 0);
-//    nh.param<double>("z", z, 0);
-//    nh.param<double>("yaw", yaw, 0);
-//    nh.param<double>("pitch", pitch, 0);
-//    nh.param<double>("roll", roll, 0);
-//    nh.param<double>("sx", sx, 1);
-//    nh.param<double>("sy", sy, 1);
-//    nh.param<double>("sz", sz, 1);
-
-//    tf::Transform transform(tf::createQuaternionFromRPY(roll / 180 * M_PI, pitch / 180 * M_PI, yaw / 180 * M_PI), tf::Vector3(x, y, z));
-//    tf::Vector3 scaling(sx, sy, sz);
-//    RigidBody body(nh, ip, port, frame_id, child_frame_id, transform, scaling);
-
-//    ros::Rate loop_rate(10);
-
-//    while(ros::ok())
-//    {
-//        body.step_vrpn();
-//        loop_rate.sleep();
-//    }
-
-//    return 0;
-//}
