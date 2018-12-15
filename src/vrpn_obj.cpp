@@ -1,6 +1,8 @@
 /*
+# Copyright (c) 2015, Robotics Embedded System Laboratory (RESL), 
+#                     University of Southern California
 # Copyright (c) 2014, Automatic Coordination of Teams Laboratory (ACT-Lab), 
-#                     University of Souther California
+#                     University of Southern California
 # Copyright (c) 2011, Georgia Tech Research Corporation
 # All rights reserved.
 # 
@@ -27,6 +29,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+## author Artem Molchanov (RESL, USC)
 ## author Wolfgang Hoenig (ACT-Lab, USC)
 ## author Advait Jain (Healthcare Robotics Lab, Georgia Tech.)
 ## author Chih-Hung Aaron King (Healthcare Robotics Lab, Georgia Tech.)
@@ -59,7 +62,7 @@ double ViconFreqEstimator::tick(bool main_loop)
 {
   double new_tick = Art::ArtClock();
   double tick_interval = new_tick - last_tick;
-//  printf("tick_interval = %f \n", tick_interval);
+  // printf("tick_interval = %f \n", tick_interval);
 
   if(main_loop)
   {
@@ -127,7 +130,7 @@ double viconObjTracker::getFreq() const
 
 void viconObjTracker::run()
 {
-//  printf("mainLoop() \n");
+  // printf("mainLoop() \n");
   obj_tracker->mainloop();
   vicon_connection->mainloop();
   freq_estim.tick(); //< the main loop tick.
@@ -144,5 +147,5 @@ void viconObjTracker::procData(const vrpn_TRACKERCB t)
   qy = t.quat[1];
   qz = t.quat[2];
 
-  freq_estim.tick(false);//< designates that the package received, but it is not the main loop tick
+  freq_estim.tick(false); //< designates that the package received, but it is not the main loop tick
 }
